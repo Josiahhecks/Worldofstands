@@ -1,6 +1,6 @@
 local success, err = pcall(function()
-    -- Load AppleLibrary
-    local library = loadstring(game:HttpGet("https://github.com/GoHamza/AppleLibrary/blob/main/main.lua?raw=true"))()
+    -- Load SenpaiLib
+    local library = loadstring(game:HttpGet("https://raw.githubusercontent.com/bloodball/-back-ups-for-libs/main/Senpai%20Lib"))()
 
     -- Game Services
     local HttpService = game:GetService("HttpService")
@@ -18,66 +18,56 @@ local success, err = pcall(function()
     local HOLD_DURATION = 1.5 -- 1.5-second hold
 
     -- Create Venus Hub UI
-    local window = library:init("Venus Hub - Chest Collector", true, Enum.KeyCode.RightShift, true)
+    local Window = library:CreateWindow("Venus Hub - Chest Collector")
 
-    window:Divider("Chest Collector")
+    -- Status Label (using Box as placeholder for text display)
+    Window:Box("Status: Chests: 0 | Stopped", function() end) -- Read-only for status
+    local statusBox = Window -- Store for updates
 
-    local mainSection = window:Section("Main Controls")
-
-    -- Status Label
-    mainSection:Label("Chests: 0 | Status: Stopped")
-    local statusLabel = mainSection -- Store for updates
-
-    -- Collect Switch
-    mainSection:Switch("Collect Chests", false, function(v)
-        isCollecting = v
-        statusLabel:Label("Chests: " .. chestsCollected .. " | Status: " .. (isCollecting and "Collecting" or "Stopped"))
-        if not isCollecting then
-            statusLabel:Label("Chests: " .. chestsCollected .. " | Status: Paused")
-        end
+    -- Collect Toggle (using Buttons for ON/OFF)
+    Window:Button("Start Collecting", function()
+        isCollecting = true
+        statusBox:Box("Status: Chests: " .. chestsCollected .. " | Collecting", function() end)
+    end)
+    Window:Button("Stop Collecting", function()
+        isCollecting = false
+        statusBox:Box("Status: Chests: " .. chestsCollected .. " | Stopped", function() end)
     end)
 
-    -- Cooldown Slider (AppleLibrary typically uses TextField for numbers, assuming Slider exists)
-    mainSection:TextField("Cooldown (5-30s)", "15", function(v)
-        local num = tonumber(v)
-        if num and num >= 5 and num <= 30 then
-            cooldownSeconds = num
-            if num < 10 then
-                statusLabel:Label("Chests: " .. chestsCollected .. " | WARNING: Low cooldown risks detection!")
-                wait(2)
-                statusLabel:Label("Chests: " .. chestsCollected .. " | Status: " .. (isCollecting and "Collecting" or "Stopped"))
-            end
-        else
-            statusLabel:Label("Enter a number between 5 and 30!")
+    -- Cooldown Slider
+    Window:Slider("Cooldown (seconds)", 5, 30, 15, function(v)
+        cooldownSeconds = v
+        if v < 10 then
+            statusBox:Box("Status: Chests: " .. chestsCollected .. " | WARNING: Low cooldown risks detection!", function() end)
             wait(2)
-            statusLabel:Label("Chests: " .. chestsCollected .. " | Status: " .. (isCollecting and "Collecting" or "Stopped"))
+            statusBox:Box("Status: Chests: " .. chestsCollected .. " | " .. (isCollecting and "Collecting" or "Stopped"), function() end)
         end
     end)
 
-    -- Webhook TextField
-    mainSection:TextField("Webhook URL", "Enter Discord Webhook...", function(v)
+    -- Webhook Textbox
+    Window:Box("Webhook URL", function(v)
         webhookUrl = v
     end)
 
     -- Save Webhook Button
-    mainSection:Button("Save Webhook", function()
+    Window:Button("Save Webhook", function()
         if webhookUrl ~= "" then
             local success, err = pcall(function()
                 HttpService:PostAsync(webhookUrl, HttpService:JSONEncode({content = "Venus Hub: Webhook test!"}))
             end)
-            statusLabel:Label(success and "Webhook saved!" or "Invalid webhook URL!")
+            statusBox:Box(success and "Status: Webhook saved!" or "Status: Invalid webhook URL!", function() end)
             wait(2)
-            statusLabel:Label("Chests: " .. chestsCollected .. " | Status: " .. (isCollecting and "Collecting" or "Stopped"))
+            statusBox:Box("Status: Chests: " .. chestsCollected .. " | " .. (isCollecting and "Collecting" or "Stopped"), function() end)
         else
-            statusLabel:Label("Enter a webhook URL!")
+            statusBox:Box("Status: Enter a webhook URL!", function() end)
             wait(2)
-            statusLabel:Label("Chests: " .. chestsCollected .. " | Status: " .. (isCollecting and "Collecting" or "Stopped"))
+            statusBox:Box("Status: Chests: " .. chestsCollected .. " | " .. (isCollecting and "Collecting" or "Stopped"), function() end)
         end
     end)
 
     -- Destroy UI Button
-    mainSection:Button("Destroy GUI", function()
-        window:destroy() -- Assuming destroy method exists
+    Window:Button("Destroy GUI", function()
+        library:Destroy() -- Assuming Destroy method exists
     end)
 
     -- Send Webhook
@@ -134,7 +124,7 @@ local success, err = pcall(function()
 
         chestsCollected = chestsCollected + 1
         sendWebhook(chest.Name)
-        statusLabel:Label("Chests: " .. chestsCollected .. " | Status: Collecting")
+        statusBox:Box("Status: Chests: " .. chestsCollected .. " | Collecting", function() end)
         print("Cooldown: " .. cooldownSeconds .. "s")
         wait(cooldownSeconds)
         isTeleporting = false
@@ -144,7 +134,7 @@ local success, err = pcall(function()
     local function startCollecting()
         local chestContainer = workspace:FindFirstChild("ChestContainer")
         if not chestContainer then
-            statusLabel:Label("No ChestContainer found!")
+            statusBox:Box("Status: No ChestContainer found!", function() end)
             warn("No ChestContainer in workspace")
             return
         end
@@ -165,7 +155,7 @@ local success, err = pcall(function()
             end
 
             if #chests == 0 then
-                statusLabel:Label("No chests! Waiting...")
+                statusBox:Box("Status: No chests! Waiting...", function() end)
                 print("No chests, waiting...")
                 wait(5)
             else
