@@ -1,6 +1,6 @@
 local success, err = pcall(function()
-    -- Load BlekLib
-    local BlekLib = loadstring(game:HttpGet("https://raw.githubusercontent.com/laderite/bleklib/main/library.lua"))()
+    -- Load AppleLibrary
+    local library = loadstring(game:HttpGet("https://github.com/GoHamza/AppleLibrary/blob/main/main.lua?raw=true"))()
 
     -- Game Services
     local HttpService = game:GetService("HttpService")
@@ -13,71 +13,71 @@ local success, err = pcall(function()
     local chestsCollected = 0
     local webhookUrl = ""
     local isTeleporting = false
-    local isCollecting = false -- Default OFF to prevent instant start
+    local isCollecting = false -- Default OFF
     local cooldownSeconds = 15
     local HOLD_DURATION = 1.5 -- 1.5-second hold
 
-    -- Create Venus Hub UI with BlekLib
-    local win = BlekLib:Create({
-        Name = "Venus Hub - Chest Collector",
-        StartupSound = {
-            Toggle = false,
-            SoundID = "rbxassetid://6958727243",
-            TimePosition = 1
-        }
-    })
+    -- Create Venus Hub UI
+    local window = library:init("Venus Hub - Chest Collector", true, Enum.KeyCode.RightShift, true)
 
-    local mainTab = win:Tab("Main")
-    local statusLabel -- To store the label for updates
+    window:Divider("Chest Collector")
+
+    local mainSection = window:Section("Main Controls")
 
     -- Status Label
-    statusLabel = mainTab:Label("Chests: 0 | Status: Stopped")
-    mainTab:Label("Venus Hub by YourName") -- Branding
+    mainSection:Label("Chests: 0 | Status: Stopped")
+    local statusLabel = mainSection -- Store for updates
 
-    -- Collect Toggle
-    mainTab:Toggle("Collect Chests", function(v)
+    -- Collect Switch
+    mainSection:Switch("Collect Chests", false, function(v)
         isCollecting = v
-        statusLabel:Set("Chests: " .. chestsCollected .. " | Status: " .. (isCollecting and "Collecting" or "Stopped"))
+        statusLabel:Label("Chests: " .. chestsCollected .. " | Status: " .. (isCollecting and "Collecting" or "Stopped"))
         if not isCollecting then
-            statusLabel:Set("Chests: " .. chestsCollected .. " | Status: Paused")
+            statusLabel:Label("Chests: " .. chestsCollected .. " | Status: Paused")
         end
     end)
 
-    -- Cooldown Slider
-    mainTab:Slider("Cooldown (seconds)", 5, 30, 15, function(v)
-        cooldownSeconds = v
-        if v < 10 then
-            statusLabel:Set("Chests: " .. chestsCollected .. " | WARNING: Low cooldown risks detection!")
+    -- Cooldown Slider (AppleLibrary typically uses TextField for numbers, assuming Slider exists)
+    mainSection:TextField("Cooldown (5-30s)", "15", function(v)
+        local num = tonumber(v)
+        if num and num >= 5 and num <= 30 then
+            cooldownSeconds = num
+            if num < 10 then
+                statusLabel:Label("Chests: " .. chestsCollected .. " | WARNING: Low cooldown risks detection!")
+                wait(2)
+                statusLabel:Label("Chests: " .. chestsCollected .. " | Status: " .. (isCollecting and "Collecting" or "Stopped"))
+            end
+        else
+            statusLabel:Label("Enter a number between 5 and 30!")
             wait(2)
-            statusLabel:Set("Chests: " .. chestsCollected .. " | Status: " .. (isCollecting and "Collecting" or "Stopped"))
+            statusLabel:Label("Chests: " .. chestsCollected .. " | Status: " .. (isCollecting and "Collecting" or "Stopped"))
         end
     end)
 
-    -- Webhook Textbox
-    mainTab:Textbox("Webhook URL", function(v)
+    -- Webhook TextField
+    mainSection:TextField("Webhook URL", "Enter Discord Webhook...", function(v)
         webhookUrl = v
     end)
 
     -- Save Webhook Button
-    mainTab:Button("Save Webhook", function()
+    mainSection:Button("Save Webhook", function()
         if webhookUrl ~= "" then
             local success, err = pcall(function()
                 HttpService:PostAsync(webhookUrl, HttpService:JSONEncode({content = "Venus Hub: Webhook test!"}))
             end)
-            statusLabel:Set(success and "Webhook saved!" or "Invalid webhook URL!")
+            statusLabel:Label(success and "Webhook saved!" or "Invalid webhook URL!")
             wait(2)
-            statusLabel:Set("Chests: " .. chestsCollected .. " | Status: " .. (isCollecting and "Collecting" or "Stopped"))
+            statusLabel:Label("Chests: " .. chestsCollected .. " | Status: " .. (isCollecting and "Collecting" or "Stopped"))
         else
-            statusLabel:Set("Enter a webhook URL!")
+            statusLabel:Label("Enter a webhook URL!")
             wait(2)
-            statusLabel:Set("Chests: " .. chestsCollected .. " | Status: " .. (isCollecting and "Collecting" or "Stopped"))
+            statusLabel:Label("Chests: " .. chestsCollected .. " | Status: " .. (isCollecting and "Collecting" or "Stopped"))
         end
     end)
 
     -- Destroy UI Button
-    local uiTab = win:Tab("UI")
-    uiTab:Button("Destroy GUI", function()
-        win:Exit()
+    mainSection:Button("Destroy GUI", function()
+        window:destroy() -- Assuming destroy method exists
     end)
 
     -- Send Webhook
@@ -134,7 +134,7 @@ local success, err = pcall(function()
 
         chestsCollected = chestsCollected + 1
         sendWebhook(chest.Name)
-        statusLabel:Set("Chests: " .. chestsCollected .. " | Status: Collecting")
+        statusLabel:Label("Chests: " .. chestsCollected .. " | Status: Collecting")
         print("Cooldown: " .. cooldownSeconds .. "s")
         wait(cooldownSeconds)
         isTeleporting = false
@@ -144,7 +144,7 @@ local success, err = pcall(function()
     local function startCollecting()
         local chestContainer = workspace:FindFirstChild("ChestContainer")
         if not chestContainer then
-            statusLabel:Set("No ChestContainer found!")
+            statusLabel:Label("No ChestContainer found!")
             warn("No ChestContainer in workspace")
             return
         end
@@ -165,7 +165,7 @@ local success, err = pcall(function()
             end
 
             if #chests == 0 then
-                statusLabel:Set("No chests! Waiting...")
+                statusLabel:Label("No chests! Waiting...")
                 print("No chests, waiting...")
                 wait(5)
             else
